@@ -9,6 +9,50 @@ scene.addEventListener('change', () => {
   if (archived) archived.disabled = changed;
 });
 document.querySelector('#print').addEventListener('click', () => print());
+
+const reopen = (params) => {
+  const query = new URLSearchParams({ sample:scene.value, work:work.value, ...params });
+  if (archived) query.set('run', archived.value);
+  location.assign(`/ledger/balance?${query}`);
+};
+const settle = document.querySelector('#close-month');
+settle?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const message = settle.querySelector('output');
+  const prices = {};
+  settle.querySelectorAll('input[data-price]').forEach((input) => {
+    if (input.value.trim()) prices[input.dataset.price] = input.value.trim();
+  });
+  const period = settle.querySelector('#close-period').value;
+  message.textContent = '关账中…';
+  try {
+    const response = await fetch('/api/closing', { method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ period, run:settle.dataset.run, prices }) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || '关账失败');
+    reopen({ period });
+  } catch (error) {
+    message.textContent = `${error.message}，请重试。`;
+  }
+});
+document.querySelectorAll('form.supplement').forEach((form) => {
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const message = form.querySelector('output');
+    const { period, origin } = form.dataset;
+    message.textContent = '补价入账中…';
+    try {
+      const response = await fetch(`/api/closing/${period}/supplements`, { method:'POST',
+        headers:{'Content-Type':'application/json'}, body:JSON.stringify({ origin, price:form.querySelector('input[name=price]').value }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || '补价失败');
+      reopen({ period });
+    } catch (error) {
+      message.textContent = `${error.message}，请重试。`;
+    }
+  });
+});
+
 const commit = document.querySelector('#commit');
 commit?.addEventListener('click', async () => {
   const message = document.querySelector('#message');

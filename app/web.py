@@ -1,10 +1,12 @@
+from datetime import datetime
 from fractions import Fraction
 
 from flask import Blueprint,render_template,request
 
-from app.api import cabinet
+from app.api import cabinet,ledger
 from app.config import RULE_VERSION
 from app.errors import RoastError
+from app.modules.closing.service import PERIOD, summarize
 from app.modules.proof.recall import recall
 from app.modules.proof.service import verify_and_export
 from app.pipeline import compute
@@ -24,6 +26,12 @@ def mass(value):
     return str(amount) if amount.denominator==1 else f'{float(amount):.3f}'.rstrip('0').rstrip('.')
 
 
+def money(value):
+    if value is None:
+        return '待补'
+    return f'{float(Fraction(value)):.2f}'
+
+
 @station.get('/')
 @station.get('/ledger/<view>')
 def counter(view='balance'):
@@ -38,7 +46,13 @@ def counter(view='balance'):
         raise RoastError('NO_WORK','找不到该工作批',404)
     proof=verify_and_export(document) if document and view=='proof' else None
     packages=proof['packages'] if proof else recall(reports) if view=='proof' else {}
+    period=request.args.get('period','') if view=='balance' else ''
+    if period and not PERIOD.fullmatch(period):
+        raise RoastError('BAD_PERIOD','账期须为 YYYY-MM')
+    period=period or datetime.now().strftime('%Y-%m')
+    closing=ledger().closing(period) if view=='balance' else None
+    closing=summarize(closing,ledger().supplements(period)) if closing else None
     return render_template('base.html',view=view,panels=PANELS,records=reports,codebook=REASONS, sample=sample, key=key,
                            manifest=document['manifest'] if document else None, work=work, rule=RULE_VERSION,
-                           proof=proof,packages=packages,dest=DEST,mass=mass,
+                           proof=proof,packages=packages,dest=DEST,mass=mass,money=money,closing=closing,period=period,
                            history=cabinet().recent() if view=='runs' else [])

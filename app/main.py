@@ -5,14 +5,16 @@ from flask import Flask,jsonify
 from app.api import api
 from app.config import PORT
 from app.errors import RoastError
+from app.modules.closing.ledger import Ledger
 from app.modules.runs.cabinet import Cabinet
 from app.web import station
 
 
-def create_app(database=None):
+def create_app(database=None, ledger=None):
     app=Flask(__name__)
     app.config['MAX_CONTENT_LENGTH']=3_000_000
     app.extensions['lot_cabinet']=Cabinet(database or os.environ.get('ROAST_CABINET','var/cabinet'))
+    app.extensions['lot_ledger']=Ledger(ledger or os.environ.get('ROAST_LEDGER','var/ledger'))
     app.register_blueprint(api)
     app.register_blueprint(station)
     app.register_error_handler(RoastError,lambda e:(jsonify(code=e.code,message=str(e)),e.status))

@@ -17,4 +17,4 @@ def dirty(files):
 
 @pytest.fixture
 def client(tmp_path):
-    return create_app(tmp_path/'cabinet').test_client()
+    return create_app(tmp_path/'cabinet',tmp_path/'ledger').test_client()

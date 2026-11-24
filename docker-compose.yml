@@ -6,6 +6,7 @@ services:
       - "18474:8000"
     environment:
       ROAST_CABINET: var/cabinet
+      ROAST_LEDGER: var/ledger
     volumes:
       - roast-cabinet:/opt/roast/var
 volumes:

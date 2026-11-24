@@ -22,8 +22,9 @@ def test_repeat_is_same(client):
 
 def test_reopen(tmp_path):
     path=tmp_path/'restock'
-    first=create_app(path).test_client().post('/api/runs',json={'sample':'dirty'}).json
-    stored=create_app(path).test_client().get(f"/api/runs/{first['id']}").json
+    books=tmp_path/'books'
+    first=create_app(path,books).test_client().post('/api/runs',json={'sample':'dirty'}).json
+    stored=create_app(path,books).test_client().get(f"/api/runs/{first['id']}").json
     assert stored=={k:first[k] for k in ('id','manifest','balance')}
 
 
